@@ -70,7 +70,6 @@
         var mapWidth = (6.5*window.innerWidth/10);
         var visWidth = (3.5*window.innerWidth/10) - 10;
         var height = window.innerHeight;
-        var zoomed = false;
         var layers = ['roads'];
         var title = 'Atlanta Crime In 2016';
         var description = 'Atlanta, Georgia ranks above the national median for crime, and though officials have made great strides in reducing crime over the past ' 
@@ -122,90 +121,91 @@
                 .attr("class", "tooltip")				
                 .style("opacity", 0.0);
 
-        var normBarGraph = vis.append('g');
+        var lineGraph = vis.append('g');
 
-        function drawOverview() {
+        d3.json("./data/atl_crime_overview.json", function(error, json) {
+            var margin = {top: 400, right: 20, bottom: 30, left: 40};
+            var graphWidth = visWidth - margin.left - margin.right;
+            var graphHeight = height - margin.top - margin.bottom;
+            var parseDate = d3.time.format("%Y").parse;
 
-            normBarGraph = vis.append('g')
+            var x = d3.time.scale().range([0, graphWidth]);
+            var y = d3.scale.log().base(2).range([graphHeight, 0]);
 
-            d3.json("./data/atl_crime_overview.json", function(error, json) {
-                var margin = {top: 400, right: 20, bottom: 30, left: 40};
-                var graphWidth = visWidth - margin.left - margin.right;
-                var graphHeight = height - margin.top - margin.bottom;
-                var parseDate = d3.time.format("%Y").parse;
+            var xAxis = d3.svg.axis()
+                .scale(x)
+                .orient('bottom');
 
-                var x = d3.time.scale().range([0, graphWidth]);
-                var y = d3.scale.log().base(2).range([graphHeight, 0]);
+            var yAxis = d3.svg.axis()
+                .scale(y)
+                .orient('left')
+                .ticks(20, ",.1s")
+                .tickSize(6, 0);
 
-                var xAxis = d3.svg.axis()
-                    .scale(x)
-                    .orient('bottom');
+            var crimeLine = d3.svg.line()
+                .x(function(d) { return x(d.year); })
+                .y(function(d) { return y(d.count); });
 
-                var yAxis = d3.svg.axis()
-                    .scale(y)
-                    .orient('left')
-                    .ticks(20, ",.1s")
-                    .tickSize(6, 0);
+            lineGraph.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-                var crimeLine = d3.svg.line()
-                    .x(function(d) { return x(d.year); })
-                    .y(function(d) { return y(d.count); });
-
-                normBarGraph.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-                json.sort(function(x, y) { return d3.ascending(x.year, y.year); });
-                json.forEach(function(d) {
-                    d.year = parseDate(d.year);
-                });
-
-                x.domain(d3.extent(json, function(d) { return d.year; }));
-                y.domain([80, d3.max(json, function(d) { return d.count; })]).nice();
-
-                var nest = d3.nest()
-                    .key(function(d) { return d.crime;})
-                    .entries(json);
-
-                normBarGraph.selectAll('path.line')
-                    .data(nest).enter().append("path")
-                    .attr("class", "line")
-                    .attr("d", function(d) { return crimeLine(d.values); })
-                    .style('stroke', function(d) { return crimeColor(d.key); })
-                    .style('stroke-width', 4)
-                    .on('mouseover', overviewMouseover)
-                    .on('mouseout', overviewMouseout)
-                    .on('mousemove', overviewMousemove);
-                
-                normBarGraph.append('g')
-                    .attr('class', 'x axis')
-                    .attr('transform', 'translate(0,' + graphHeight + ')')
-                    .call(xAxis);
-
-                normBarGraph.append('g')
-                    .attr('class', 'y axis')
-                    .call(yAxis);
-
-                function overviewMouseover(data) {
-                    console.log(data);
-                    tooltip
-                        .style("opacity", 0.8)
-                        .html(data.key);
-                }
-
-                function overviewMousemove(data) {
-                    tooltip
-                        .style("left", (d3.event.pageX - 60) + "px")
-                        .style("top", (d3.event.pageY - 65) + "px");
-                }
-
-                function overviewMouseout(data) {
-                    tooltip
-                        .style("opacity", 0.0);
-                }
-                
+            json.sort(function(x, y) { return d3.ascending(x.year, y.year); });
+            json.forEach(function(d) {
+                d.year = parseDate(d.year);
             });
-        }
 
-        drawOverview();
+            x.domain(d3.extent(json, function(d) { return d.year; }));
+            y.domain([80, d3.max(json, function(d) { return d.count; })]).nice();
+
+            var nest = d3.nest()
+                .key(function(d) { return d.crime;})
+                .entries(json);
+
+            lineGraph.selectAll('path.line')
+                .data(nest).enter().append("path")
+                .attr("class", "line")
+                .attr("d", function(d) { return crimeLine(d.values); })
+                .style('stroke', function(d) { return crimeColor(d.key); })
+                .style('stroke-width', 5)
+                .on('mouseover', overviewMouseover)
+                .on('mouseout', overviewMouseout)
+                .on('mousemove', overviewMousemove);
+            
+            lineGraph.append('g')
+                .attr('class', 'x axis')
+                .attr('transform', 'translate(0,' + graphHeight + ')')
+                .call(xAxis);
+
+            lineGraph.append('g')
+                .attr('class', 'y axis')
+                .call(yAxis);
+
+            function overviewMouseover(data) {
+                lineGraph.selectAll('.line')
+                                .style('stroke', function(d) {
+                                    if (d.key == data.key)
+                                        return crimeColor(d.key);
+                                    else
+                                        return 'grey';
+                                });
+                tooltip
+                    .style("opacity", 0.8)
+                    .html(data.key);
+            }
+
+            function overviewMousemove(data) {
+                tooltip
+                    .style("left", (d3.event.pageX - 60) + "px")
+                    .style("top", (d3.event.pageY - 65) + "px");
+            }
+
+            function overviewMouseout(data) {
+                lineGraph.selectAll('.line').style('stroke', function(d) { return crimeColor(d.key); })
+
+                tooltip
+                    .style("opacity", 0.0);
+            }
+            
+        });
 
         //Setup Map SVG
         var map = d3.select('body').append('svg')
@@ -250,6 +250,35 @@
                         });
                 });
             /* End g block */
+        var linkClicked = false;
+        //Display 'About this visualization
+        var mapLink = map.append('text')
+            .attr('x', mapWidth - 270)
+            .attr('y', height - 20)
+            .style('font-size', '24px')
+            .text('About this Visualization')
+            .on('mouseover', function(d) { mapLink.style('fill', '#CC9E51')})
+            .on('mouseout', function(d) { mapLink.style('fill', '#DDDFDF')})
+            .on('click', function(d) { 
+                if(linkClicked) {
+                    visTitle.text(title);
+                    visDescription.html(description);
+                    mapLink.text('About this Visualization');
+                    lineGraph
+                        .style("opacity", 1.0)
+                        .style("pointer-events", "all");
+                    linkClicked=false;
+                }
+                else {
+                    visTitle.text('About This Visualization');
+                    visDescription.html('This visualization was made by Deven Jarvis.');
+                    lineGraph
+                        .style("opacity", 0.0)
+                        .style("pointer-events", "none");
+                    mapLink.text('Return to Visualization');
+                    linkClicked=true;
+                }
+                });
 
         /* Start map load */
         d3.json('./data/neighborhood_data.json', function(error, neighborhoods) {
@@ -302,14 +331,16 @@
                     .attr('cy', function(d) { return d.y});
             });
 
-            force.start(); 
+            force.start();
 
             d3.select('svg.map')
                 .on('click', zoomOut);
 
+            var zoomed = false;
+
             function zoomIn(x, y, scale) {
                 overlay
-                    .transition().duration(750)
+                    .transition().duration(750).delay(400)
                     .attr('transform', 'translate(' + mapWidth/2 + ',' + height/2 + ')scale(' + scale + ')translate(' + -x + ',' + -y + ')')
                
                 neighborhoodPoints
@@ -317,47 +348,60 @@
                     .attr('r', '0px');
 
                 background
-                    .transition().duration(750)
+                    .transition().duration(750).delay(400)
                     .attr('transform', 'translate(' + mapWidth/2 + ',' + height/2 + ')scale(' + scale + ')translate(' + -x + ',' + -y + ')');
 
                 tooltip.style("opacity", 0.0);
 
-                normBarGraph.remove();
-                zoomed = true;
+                lineGraph
+                    .style("opacity", 0.0)
+                    .style("pointer-events", "none");
+
+                zoomed=true;
+                
+                mapLink
+                    .text('About this Visualization')
+                    .style('opacity', 0.0)
+                    .style('pointer-events', 'none');
+
+                linkClicked=false;
             } 
 
             function zoomOut() {
+                if (zoomed) {
+                vis.select('g.barGraph').remove();
+
                 //Zoom out the map layer
                 background
                     .transition().duration(750)
                     .attr('transform', 'scale(' + 1 + ')translate(' + 0 + ',' + 0 + ')');
+
+                //Resize the neighborhood markers
+                neighborhoodPoints
+                    .transition().duration(350).delay(400)
+                    .attr('r', function(d) { return Math.log2(d.count)});
+
+                //Remove vis charts and text
+                visTitle.text(title);
+                visDescription.html(description);
+
+                tooltip 
+                    .style("opacity", 0.0);
+
+                    lineGraph
+                        .style("opacity", 1.0)
+                        .style("pointer-events", "all");
+
+                    mapLink.style('opacity', 1.0).style('pointer-events', 'all');
+
+                    zoomed=false;
 
                 //Zoom out our overlay layer
                 overlay
                     .transition().duration(750)
                     .attr('transform', 'scale(' + 1 + ')translate(' + 0 + ',' + 0 + ')')
                     .selectAll('circle.crimeEvent').remove();
-
-                //Resize the neighborhood markers
-                neighborhoodPoints
-                    .transition().duration(750)
-                    .attr('r', function(d) { return Math.log2(d.count)});
-
-                //Remove vis charts and text
-                vis.selectAll('g.barGraph').remove();
-                visTitle.text(title);
-                visDescription.html(description);
-
-                tooltip 
-                    .style("width", "150px")
-                    .style("height", "50px")
-                    .style("opacity", 0.0);
-
-                if (zoomed)
-                    drawOverview();
-
-                zoomed=false;
-
+                }
             }               
 
             function neighborhoodClick(data, index) {
@@ -370,21 +414,29 @@
                 }
 
                 /*Start neighborhood load block */
-                d3.json('./data/' + neighborhoodName + '_data_2016.json', function(error, json) {
-                    zoomIn(data.x, data.y, 9); 
+                d3.json('./data/' + neighborhoodName + '_data_2016.json', function(error, json) { 
                     //Update Neighborhood Label
                     visTitle.text(data.label);
+                    zoomIn(data.x, data.y, 9);
 
                     //Build annotation
-                    var commonCrime = d3.nest()
+                    var typeAgg = d3.nest()
                             .key(function(d) {return d.type; })
                             .rollup(function(v) { return v.length; })
-                            .entries(json)
+                            .entries(json);
+                    var commonCrime = typeAgg
                             .sort(function(x, y) { return d3.descending(x.values, y.values); })
                             [0].key;
 
                     var commonTime = d3.nest()
                             .key(function(d) {return d.occur_time; })
+                            .rollup(function(v) { return v.length; })
+                            .entries(json)
+                            .sort(function(x, y) { return d3.descending(x.values, y.values); })
+                            [0].key;
+
+                    var commonDay = d3.nest()
+                            .key(function(d) {return d.day; })
                             .rollup(function(v) { return v.length; })
                             .entries(json)
                             .sort(function(x, y) { return d3.descending(x.values, y.values); })
@@ -402,13 +454,6 @@
                         newTime = parseInt(commonTime);
                         commonTime = String(newTime) + ':00 AM'; 
                     }
-
-                    var commonDay = d3.nest()
-                            .key(function(d) {return d.day; })
-                            .rollup(function(v) { return v.length; })
-                            .entries(json)
-                            .sort(function(x, y) { return d3.descending(x.values, y.values); })
-                            [0].key;
 
                     switch(commonDay) {
                         case 'Mon':
@@ -450,14 +495,11 @@
                             .attr('cx', function(d) { return projection([d.longitude,d.latitude])[0];})
                             .attr('cy', function(d) { return projection([d.longitude,d.latitude])[1];})
                             .attr('r', '1px')
-                            .attr('fill-opacity', '0.5')
-                            .attr('fill', '#29B6F6')
-                            //.on('click', zoomOut)
+                            .attr('fill-opacity', '0.7')
                             .on('mouseover', eventMouseover)
                             .on('mouseout', eventMouseout);
 
                     function eventMouseover(data) {
-                        console.log(data);
                         tooltip
                             .style("opacity", 0.8)
                             .style("width", "180px")
@@ -474,11 +516,6 @@
 
                     function displayType() {
                         var isClicked = '';
-                        //Get aggregated data
-                        var typeAgg = d3.nest()
-                            .key(function(d) {return d.type; })
-                            .rollup(function(v) { return v.length; })
-                            .entries(json);
 
                         //Fill in 0 values
                         crimes = ['ROBBERY-RESIDENCE', 'ROBBERY-PEDESTRIAN', 'ROBBERY-COMMERCIAL', 'RAPE', 'LARCENY-NON VEHICLE', 'LARCENY-FROM VEHICLE', 'HOMICIDE', 'BURGLARY-RESIDENCE', 'BURGLARY-NONRES', 'AUTO THEFT', 'AGG ASSAULT'];
@@ -488,7 +525,6 @@
                             else
                                 var newObject = { 'key': crimes[i], 'values': 0};
                                 typeAgg.push(newObject)
-
                         }
 
                         //Sort x-axis of the bar chart
@@ -501,7 +537,7 @@
                         var y = d3.scale.ordinal().rangeRoundBands([graphHeight, 0]);
                         var x = d3.scale.linear().range([0, graphWidth]);
 
-                        var graph = vis.append('g')
+                        var barGraph = vis.append('g')
                             .attr('class', 'barGraph')
                             .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                         
@@ -512,13 +548,14 @@
                             .scale(x)
                             .orient('bottom');
 
-                        graph.append('g')
+                        barGraph.append('g')
                             .attr('class', 'x axis')
                             .attr('transform', 'translate(0,' + graphHeight + ')')
+                            .transition().duration(750).delay(500)
                             .call(xAxis);
 
                         //Draw barchart
-                        graph.selectAll('rect.bar')
+                        barGraph.selectAll('rect.bar')
                             .data(typeAgg)
                             .enter().append('rect')
                                 .on('mouseover', crimeMouseover)
@@ -530,10 +567,10 @@
                                 .attr('y', function(d) { return y(d.key); })
                                 .attr('height', y.rangeBand())
                                 .attr('width', 0)
-                                .transition().duration(750)
+                                .transition().duration(750).delay(500)
                                 .attr('width', function(d) { return x(d.values); });
 
-                        graph.selectAll('.label')
+                        barGraph.selectAll('.label')
                             .data(typeAgg)
                             .enter().append('text')
                                 .attr('class', 'label')
@@ -543,7 +580,7 @@
                                 .attr('dy', '.50em')
                                 .text(function(d) { return d.key; })
                                 .attr('fill-opacity', 0.0)
-                                .transition().duration(500)
+                                .transition().duration(750).delay(500)
                                 .attr('fill-opacity', 1.0)
                                 .style("pointer-events", "none");
 
@@ -553,7 +590,7 @@
                         function crimeMouseover(data) {
                             if(isClicked == '' && data.values > 0) {
                                 //Hide other bars
-                                graph.selectAll('rect.bar')
+                                barGraph.selectAll('rect.bar')
                                     .attr('fill', function(d) {
                                         if (d.key == data.key)
                                             return crimeColor(d.key);
@@ -582,7 +619,7 @@
                         function crimeMouseout(data) {
                             if(isClicked == '') {
                                 //Hide other bars
-                                graph.selectAll('rect.bar')
+                                barGraph.selectAll('rect.bar')
                                     .attr('fill', function(d) {
                                             return crimeColor(d.key);
                                     });
@@ -627,7 +664,9 @@
                     .style("opacity", 0.8)
                     .html(data.label + '<br/>' + data.count + ' crimes')
                     .style("left", (d3.event.pageX - 60) + "px")
-                    .style("top", (d3.event.pageY - 65) + "px");
+                    .style("top", (d3.event.pageY - 65) + "px")
+                    .style("width", "150px")
+                    .style("height", "50px");
             }
 
             function neighborhoodMouseout(data, index) {
