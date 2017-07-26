@@ -508,7 +508,9 @@
                             break;
                     }
 
-                    visDescription.html(
+                    visDescription
+                        .style('height', '320px')
+                        .html(
                         'In ' + data.label + ' the most common type of crime is ' + commonCrime.toLowerCase() 
                         + '. Crimes in this area normally occur at ' + commonTime + ', with the most common day for crime to happen being ' 
                         + commonDay + '. <br/><br/> Click into the below offense types to filter the related criminal events, represented by the markers on the map.'
