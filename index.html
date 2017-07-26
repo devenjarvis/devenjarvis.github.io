@@ -31,6 +31,13 @@
                 pointer-events: none;	
             }
 
+            .description{
+                position: absolute;								
+                font: 18px 'Playfair Display';
+                border: 0px;		
+                overflow-y: auto;	
+            }
+
 
             .major_road { stroke: #DDDFDF; }
             .highway { stroke: #B55246; }
@@ -105,16 +112,14 @@
             .text(title);
 
         //Display description
-        var visDescription = vis.append('foreignObject')
-            .attr('x', 20)
-            .attr('y', 70)
-            .attr('width', visWidth - 20)
-            .attr('height', 400)
-            .append("xhtml:body")
-            .style('font-family', 'Playfair Display')
-            .style('font-size', '18px')
-            .style('color', 'white')
-            .html(description);
+        var visDescription = d3.select('body').append('div')
+            .attr('class', 'description')
+            .html(description)
+            .style('left', 20 + 'px')
+            .style('top', 70 + 'px')
+            .style('width', visWidth - 20 + 'px')
+            .style('height', 320 + 'px')
+            .style('color', 'white');
 
         //Display Overview Graph
         var tooltip = d3.select("body").append("div")	
@@ -262,7 +267,8 @@
             .on('click', function(d) { 
                 if(linkClicked) {
                     visTitle.text(title);
-                    visDescription.html(description);
+                    visDescription
+                        .style('font-size', '18px').style('height', 320).html(description);
                     mapLink.text('About this Visualization');
                     lineGraph
                         .style("opacity", 1.0)
@@ -271,7 +277,27 @@
                 }
                 else {
                     visTitle.text('About This Visualization');
-                    visDescription.html('This visualization was made by Deven Jarvis.');
+                    visDescription
+                        .style('font-size', '14px')
+                        .style('height', height + 'px')
+                        .html('This visualization was created by Deven Jarvis using D3.js as a final project for CS 498, Data Visualization at UIUC. '    +
+                    'The narrative visualization uses a drill down story structure, providing a high-level overview of crime trends in Atlanta, while allowing'     +
+                    ' the user to dive deeper into specific locations within Atlanta to gather more specific details. <br/><br/> In total, there are 241 scenes that'    +
+                    ' are dynamically created in this visualization, one for the city-wide overview, and one for each of the 240 neighborhoods that Metro Atlanta'  +
+                    ' is divided into. These scenes all follow a template with a marked, interactive section of the map on the right and annotations and an'        +
+                    ' aggregate graph (line or bar) on the left. Colors are kept consistent throughout the scenes, corresponding the same crimes to the same colors'+
+                    ' in each scene. <br/><br/> Each of the 241 scenes contain annotations that help guide the user towards notable information. The city-wide scene'    +
+                    ' provides an introductory paragraph, giving a history to Atlanta\'s crime, a justification for this visualization, as well as trends of '       +
+                    'specific crimes that are contrary to the overall trend. Each individual neighborhood contains a dynamically generated annotation that gives '  +
+                    'the user insight into the most common type, time, and day for crimes to happen within this neighborhood. All graphs and map markers also '     +
+                    'utilize tooltips to allow for clarity and often more specific information (such as the address a specific crime event occurred). <br/><br/> The '   +
+                    'parameters that users may interact with in this visualization include overall crime trends, what neighborhood to drill down into, and '   +
+                    'types of crime within a neighborhood to investigate. The overall crime trends are shown in the city-wide multiline graph, with '   +
+                    'specific trends being triggered when the user mouse-overs a specific line. The neighborhood that the user chooses to explore is triggered by ' +
+                    'clicking on one of the neighborhood markers in the main scene. Finally, specific crime locations can be filtered when the user '      +
+                    'mouse-overs or clicks a bar corresponding to a crime type in the neighborhood scene bar graph. <br/><br/> My goal is that users of this '       +
+                    'visualization find an accessible way to explore interesting crime trends in the Metro Atlanta area, specifically with a focus for those who '  +
+                    'wish to consider specific neighborhoods that they may live, work, or visit in. I hope you find this visualization meets that goal.');
                     lineGraph
                         .style("opacity", 0.0)
                         .style("pointer-events", "none");
